@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
-export DEBIAN_FRONTEND=noninteractive
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+set -e
+
+echo "===== apps.sh ====="
 
 echo "Downloading Chrome Stable from Google..."
-if curl -fL --retry 3 --connect-timeout 20 -o "$TMP/chrome.deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; then
-  sudo apt-get install -y "$TMP/chrome.deb"
-else
-  echo "Chrome download failed; skipping."
-fi
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
+sudo apt update
+sudo apt install -y /tmp/chrome.deb
+rm -f /tmp/chrome.deb
 
 echo "Setting up Microsoft's official VS Code repository..."
-if curl -fL --retry 3 --connect-timeout 20 -o "$TMP/msrepo.deb" https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb; then
-  sudo apt-get install -y "$TMP/msrepo.deb"
-  sudo apt-get update
-  sudo apt-get install -y code
-else
-  echo "VS Code repository bootstrap failed; skipping."
-fi
+sudo apt update
+sudo apt install -y wget gpg apt-transport-https
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
+rm -f packages.microsoft.gpg
+
+sudo apt update
+sudo apt install -y code
+
+echo "apps.sh finished successfully!"
